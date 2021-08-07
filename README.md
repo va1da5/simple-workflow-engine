@@ -13,7 +13,7 @@ This is a toy project, an attempt to create a simple workflow engine that could 
 
 ## Workflow Step Example 
 
-The step executor uses `handle` function to execute the step, so this function must be implemented in the step code.
+The executor uses `handle` function to run code, so this name must be defined in the code block.
 
 ```python
 import requests
