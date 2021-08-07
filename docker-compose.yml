@@ -1,0 +1,70 @@
+version: "3"
+
+services:
+  api: &app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DJANGO_SECRET_KEY: $DJANGO_SECRET_KEY
+      DJANGO_DEBUG: $DJANGO_DEBUG
+      DJANGO_ALLOWED_HOSTS: $DJANGO_ALLOWED_HOSTS
+      DJANGO_CORS_ALLOW_ALL_ORIGINS: $DJANGO_CORS_ALLOW_ALL_ORIGINS
+
+      DATABASE_NAME: $DATABASE_NAME
+      DATABASE_USER: $DATABASE_USER
+      DATABASE_PASSWORD: $DATABASE_PASSWORD
+      DATABASE_HOST: database
+      DATABASE_PORT: $DATABASE_PORT
+
+      CELERY_BROKER_URL: redis://redis/0
+      #CELERY_BROKER_URL: amqp://admin:password@rabbitmq/nmap
+      CELERY_RESULT_BACKEND: redis://redis/1
+      CELERY_RESULT_EXPIRES: $CELERY_RESULT_EXPIRES
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/app
+    entrypoint: sh
+    command:
+      - "-c"
+      - "python manage.py runserver 0.0.0.0:8000"
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    command:
+      - "-c"
+      - "watchmedo auto-restart --directory=./config --directory=./flows --pattern=*.py --recursive -- celery -A config worker -l info"
+    restart: unless-stopped
+    ports: []
+
+  database:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: $DATABASE_USER
+      POSTGRES_PASSWORD: $DATABASE_PASSWORD
+      POSTGRES_DB: $DATABASE_NAME
+    ports:
+      - 5432:5432
+    # volumes:
+    #   - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # rabbitmq:
+  #   image: rabbitmq:management-alpine
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: admin
+  #     RABBITMQ_DEFAULT_PASS: password
+  #     RABBITMQ_DEFAULT_VHOST: nmap
+  #   ports:
+  #     - 5672:5672
+  #   restart: unless-stopped
+
+  redis:
+    image: redis:6.0-alpine
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+# volumes:
+#   pg_data: {}
